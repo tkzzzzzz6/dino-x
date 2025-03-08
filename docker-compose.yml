@@ -1,0 +1,18 @@
+version: '3'
+
+services:
+  dinox-app:
+    build: .
+    container_name: dinox-app
+    ports:
+      - "8501:8501"
+    volumes:
+      - ./.env:/app/.env
+    environment:
+      - DINOX_API_TOKEN=${DINOX_API_TOKEN}
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "--fail", "http://localhost:8501/_stcore/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3 
