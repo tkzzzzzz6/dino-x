@@ -15,4 +15,7 @@ services:
       test: ["CMD", "curl", "--fail", "http://localhost:8501/_stcore/health"]
       interval: 30s
       timeout: 10s
-      retries: 3 
+      retries: 3
+    # 添加网络设置，使用host网络模式可以解决一些网络访问问题
+    # 注意：host网络模式仅在Linux主机上有效，在Windows和Mac上不起作用
+    # network_mode: "host"  # 取消注释此行以在Linux主机上使用host网络模式

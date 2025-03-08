@@ -29,5 +29,5 @@ EXPOSE 8501
 # 设置健康检查
 HEALTHCHECK CMD curl --fail http://localhost:8501/_stcore/health || exit 1
 
-# 启动命令
-ENTRYPOINT ["streamlit", "run", "app.py", "--server.port=8501", "--server.address=127.0.0.1"] 
+# 启动命令 - 修改地址为0.0.0.0以允许外部访问
+ENTRYPOINT ["python", "run.py", "--server.port=8501", "--server.address=0.0.0.0"] 

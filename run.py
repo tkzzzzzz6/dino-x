@@ -28,4 +28,4 @@ if __name__ == "__main__":
     print("按 Ctrl+C 停止服务")
     
     # 启动 Streamlit 应用，指定主机为 0.0.0.0（允许所有网络接口访问）
-    subprocess.run(["streamlit", "run", "app.py", "--server.address", "127.0.0.1", "--server.port", str(port)]) 
+    subprocess.run(["streamlit", "run", "app.py", "--server.address", "0.0.0.0", "--server.port", str(port)]) 
