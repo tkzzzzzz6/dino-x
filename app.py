@@ -171,8 +171,8 @@ with st.sidebar:
         mask = st.checkbox("分割掩码", value=True)
     
     with col2:
-        pose = st.checkbox("姿态关键点", value=False)
-        hand = st.checkbox("手部关键点", value=False)
+        pose = st.checkbox("姿态关键点", value=True)
+        hand = st.checkbox("手部关键点", value=True)
     
     # Collect selected targets
     targets = []
@@ -401,12 +401,15 @@ with col1:
                         # Get the image to analyze
                         image_to_analyze = st.session_state.processed_image if st.session_state.processed_image is not None else st.session_state.uploaded_image
                         
+                        # 确保包含所有目标类型
+                        all_targets = ["bbox", "mask", "pose_keypoints", "hand_keypoints"]
+                        
                         # Perform detection with universal mode
                         result, session_id = detect_objects(
                             image_to_analyze,
                             prompt_type="universal",
                             prompt_universal=1,
-                            targets=targets,
+                            targets=all_targets,  # 使用所有目标类型
                             bbox_threshold=0.05  # 使用更低的阈值
                         )
                         
@@ -471,71 +474,91 @@ with col1:
 with col2:
     st.markdown("<h2 class='sub-header'>检测结果</h2>", unsafe_allow_html=True)
     
-    if st.session_state.detection_results and "objects" in st.session_state.detection_results:
-        # Get the image to visualize
-        image_to_visualize = st.session_state.processed_image if st.session_state.processed_image is not None else st.session_state.uploaded_image
+    # 显示检测结果
+    if 'detection_results' in st.session_state and st.session_state.detection_results:
+        result = st.session_state.detection_results
         
-        if image_to_visualize is not None:
-            # Visualize detection results
-            visualized_image = visualize_detection_results(
-                image_to_visualize.copy(),
-                st.session_state.detection_results["objects"],
-                show_bbox=show_bbox,
-                show_mask=show_mask,
-                show_pose=show_pose,
-                show_hand=show_hand,
-                show_caption=show_caption
-            )
-            
-            # Display the visualized image
-            st.image(visualized_image, caption="检测结果", use_column_width=True)
-            
-            # Add a button to save the visualized image
-            if st.button("💾 保存结果", key="save_image", use_container_width=True):
-                try:
-                    # Convert the visualized image to PIL Image
-                    pil_image = Image.fromarray(visualized_image)
-                    
-                    # Create a BytesIO object
-                    buf = io.BytesIO()
-                    pil_image.save(buf, format="PNG")
-                    
-                    # Get the byte value
-                    byte_im = buf.getvalue()
-                    
-                    # Create a download button
-                    timestamp = time.strftime("%Y%m%d-%H%M%S")
-                    filename = f"dinox_analysis_{timestamp}.png"
-                    st.download_button(
-                        label="📥 下载图像",
-                        data=byte_im,
-                        file_name=filename,
-                        mime="image/png",
-                        key="download_button"
-                    )
-                    
-                    st.success(f"图像已准备好下载: {filename}")
-                except Exception as e:
-                    st.error(f"保存图像时出错: {str(e)}")
-            
-            # Display detection summary
-            st.markdown("<h3>检测摘要</h3>", unsafe_allow_html=True)
-            summary = create_detection_summary(st.session_state.detection_results["objects"])
-            st.markdown(f"<div class='detection-summary'>{summary}</div>", unsafe_allow_html=True)
-            
-            # Display detection time
-            if st.session_state.last_detection_time is not None:
-                st.info(f"检测时间: {st.session_state.last_detection_time:.2f} 秒")
-            
-            # Display raw JSON results
-            with st.expander("查看原始 JSON 结果"):
-                st.json(st.session_state.detection_results)
+        # 显示检测时间
+        if 'last_detection_time' in st.session_state:
+            st.info(f"检测耗时: {st.session_state.last_detection_time:.2f} 秒")
         
+        # 显示会话ID
+        if 'session_id' in st.session_state and st.session_state.session_id:
+            st.info(f"会话 ID: {st.session_state.session_id}")
+        
+        # 显示检测结果摘要
+        if "objects" in result and result["objects"]:
+            st.success(f"检测到 {len(result['objects'])} 个对象")
+            
+            # 显示检测结果可视化
+            if 'uploaded_image' in st.session_state and st.session_state.uploaded_image is not None:
+                # 获取原始图像
+                original_image = st.session_state.processed_image if st.session_state.processed_image is not None else st.session_state.uploaded_image
+                
+                # 显示选项
+                st.markdown("<h3>显示选项</h3>", unsafe_allow_html=True)
+                show_bbox = st.checkbox("显示边界框", value=True)
+                show_mask = st.checkbox("显示掩码", value=True)
+                show_pose = st.checkbox("显示姿态", value=True)
+                show_hand = st.checkbox("显示手部", value=True)
+                show_caption = st.checkbox("显示描述", value=True)
+                
+                # 可视化检测结果
+                visualized_image = visualize_detection_results(
+                    original_image, 
+                    result["objects"],
+                    show_bbox=show_bbox,
+                    show_mask=show_mask,
+                    show_pose=show_pose,
+                    show_hand=show_hand,
+                    show_caption=show_caption
+                )
+                
+                # 显示可视化结果
+                st.image(visualized_image, caption="检测结果", use_column_width=True)
+                
+                # 添加保存按钮
+                if st.button("💾 保存结果", key="save_image", use_container_width=True):
+                    try:
+                        # Convert the visualized image to PIL Image
+                        pil_image = Image.fromarray(visualized_image)
+                        
+                        # Create a BytesIO object
+                        buf = io.BytesIO()
+                        pil_image.save(buf, format="PNG")
+                        
+                        # Get the byte value
+                        byte_im = buf.getvalue()
+                        
+                        # Create a download button
+                        timestamp = time.strftime("%Y%m%d-%H%M%S")
+                        filename = f"dinox_analysis_{timestamp}.png"
+                        st.download_button(
+                            label="📥 下载图像",
+                            data=byte_im,
+                            file_name=filename,
+                            mime="image/png",
+                            key="download_button"
+                        )
+                        
+                        st.success(f"图像已准备好下载: {filename}")
+                    except Exception as e:
+                        st.error(f"保存图像时出错: {str(e)}")
+                
+                # 显示检测结果详情
+                with st.expander("检测结果详情", expanded=False):
+                    summary = create_detection_summary(result["objects"])
+                    st.markdown(summary)
+                    
+                    # 显示原始JSON结果
+                    with st.expander("原始JSON结果", expanded=False):
+                        st.json(result)
+            else:
+                st.warning("无法显示检测结果可视化，因为没有上传图像")
         else:
-            st.warning("无法显示检测结果。请确保图像已正确上传。")
-    
+            st.warning("未检测到任何对象")
     else:
-        st.info('尚未进行分析。请上传图像并点击"分析图像"按钮。')
+        st.info("请上传图像并点击分析按钮")
     
     # Add debug information
     with st.expander("调试信息"):

@@ -207,7 +207,20 @@ def detect_objects(image, prompt_type="text", prompt_text=None, prompt_universal
         result, new_session_id = get_task_result(task_uuid)
         
         print(f"检测完成, 会话 ID: {new_session_id}")
-        print(f"检测结果: {json.dumps(result, ensure_ascii=False, indent=2)}")
+        
+        # 打印完整的API响应，包括所有字段
+        print("API响应完整数据:")
+        if "objects" in result:
+            for i, obj in enumerate(result["objects"]):
+                print(f"\n对象 {i+1}:")
+                for key, value in obj.items():
+                    if key == "mask":
+                        print(f"  {key}: {type(value)} - {value.keys() if isinstance(value, dict) else '非字典类型'}")
+                    elif key in ["pose_keypoints", "hand_keypoints"]:
+                        print(f"  {key}: {type(value)} - 长度: {len(value) if isinstance(value, list) else '非列表类型'}")
+                    else:
+                        print(f"  {key}: {value}")
+        
         print(f"===== DINO-X API 调用结束 =====\n")
         
         return result, new_session_id

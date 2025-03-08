@@ -161,34 +161,97 @@ def draw_mask(image, mask, color=None, alpha=0.5):
 def draw_keypoints(image, keypoints, connections=None, color=None):
     """
     Draw keypoints and connections on an image
+    
+    keypoints: 可能是以下格式之一:
+    1. 扁平列表: [x1, y1, v1, s1, x2, y2, v2, s2, ...]
+    2. 嵌套列表: [[x1, y1, v1, s1], [x2, y2, v2, s2], ...]
+    3. 字典列表: [{"x": x1, "y": y1, "visible": v1, "score": s1}, ...]
     """
-    if keypoints is None:
+    if keypoints is None or len(keypoints) == 0:
+        print("Warning: No keypoints to draw")
         return image
     
+    # Make a copy of the image to avoid modifying the original
+    vis_image = image.copy()
+    
+    # If color is not provided, use a default color
     if color is None:
-        color = random.choice(COLORS)
+        color = (0, 255, 0)  # Green
     
-    # Convert color from matplotlib format to BGR
-    if isinstance(color, str):
-        rgb = mcolors.to_rgb(color)
-        color = (int(rgb[2] * 255), int(rgb[1] * 255), int(rgb[0] * 255))
+    try:
+        print(f"Keypoints data type: {type(keypoints)}")
+        print(f"Keypoints data: {keypoints[:20] if isinstance(keypoints, list) else keypoints}")
+        
+        # 转换关键点为标准格式: [[x, y, visible, score], ...]
+        formatted_keypoints = []
+        
+        # 检查关键点格式
+        if isinstance(keypoints, list):
+            if len(keypoints) == 0:
+                return vis_image
+                
+            # 检查是否为扁平列表
+            if not isinstance(keypoints[0], (list, dict)):
+                # 扁平列表: [x1, y1, v1, s1, x2, y2, v2, s2, ...]
+                for i in range(0, len(keypoints), 4):
+                    if i + 3 < len(keypoints):
+                        x, y, v, s = keypoints[i:i+4]
+                        formatted_keypoints.append([x, y, v, s])
+            
+            # 检查是否为嵌套列表
+            elif isinstance(keypoints[0], list):
+                # 嵌套列表: [[x1, y1, v1, s1], [x2, y2, v2, s2], ...]
+                formatted_keypoints = keypoints
+            
+            # 检查是否为字典列表
+            elif isinstance(keypoints[0], dict):
+                # 字典列表: [{"x": x1, "y": y1, "visible": v1, "score": s1}, ...]
+                for kp in keypoints:
+                    x = kp.get("x", 0)
+                    y = kp.get("y", 0)
+                    v = kp.get("visible", 0)
+                    s = kp.get("score", 0)
+                    formatted_keypoints.append([x, y, v, s])
+        else:
+            print(f"Unsupported keypoints format: {type(keypoints)}")
+            return vis_image
+        
+        print(f"Formatted keypoints: {formatted_keypoints[:5]}")
+        
+        # 绘制关键点
+        for i, kp in enumerate(formatted_keypoints):
+            x, y, visible, score = kp
+            
+            # 只绘制可见的关键点
+            if visible > 0 and score > 0.1:
+                cv2.circle(vis_image, (int(x), int(y)), 5, color, -1)
+                
+                # 可选: 绘制关键点索引
+                # cv2.putText(vis_image, str(i), (int(x), int(y)), cv2.FONT_HERSHEY_SIMPLEX, 0.5, color, 1)
+        
+        # 绘制连接线
+        if connections is not None:
+            for connection in connections:
+                idx1, idx2 = connection
+                
+                if idx1 < len(formatted_keypoints) and idx2 < len(formatted_keypoints):
+                    kp1 = formatted_keypoints[idx1]
+                    kp2 = formatted_keypoints[idx2]
+                    
+                    x1, y1, v1, s1 = kp1
+                    x2, y2, v2, s2 = kp2
+                    
+                    # 只绘制两个端点都可见的连接线
+                    if v1 > 0 and v2 > 0 and s1 > 0.1 and s2 > 0.1:
+                        cv2.line(vis_image, (int(x1), int(y1)), (int(x2), int(y2)), color, 2)
+        
+        return vis_image
     
-    # Draw keypoints
-    for kp in keypoints:
-        if len(kp) >= 2:
-            x, y = int(kp[0]), int(kp[1])
-            cv2.circle(image, (x, y), 3, color, -1)
-    
-    # Draw connections if provided
-    if connections:
-        for connection in connections:
-            idx1, idx2 = connection
-            if idx1 < len(keypoints) and idx2 < len(keypoints):
-                pt1 = (int(keypoints[idx1][0]), int(keypoints[idx1][1]))
-                pt2 = (int(keypoints[idx2][0]), int(keypoints[idx2][1]))
-                cv2.line(image, pt1, pt2, color, 1)
-    
-    return image
+    except Exception as e:
+        print(f"Error in draw_keypoints: {e}")
+        import traceback
+        print(traceback.format_exc())
+        return image
 
 def visualize_detection_results(image, objects, show_bbox=True, show_mask=True, 
                                show_pose=True, show_hand=True, show_caption=True):
