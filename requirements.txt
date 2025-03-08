@@ -1,0 +1,13 @@
+streamlit==1.10.0
+# opencv-python==4.8.1.78
+opencv-python-headless
+numpy==1.19.5
+requests==2.27.1
+# Start of Selection
+python-dotenv==0.19.2
+Pillow==8.4.0
+pybase64==1.0.1
+matplotlib==3.3.4
+pandas==1.1.5
+altair==4.1.0 
+# End of Selection
