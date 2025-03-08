@@ -164,48 +164,19 @@ with st.sidebar:
     # Detection targets
     st.markdown("<h3>检测目标</h3>", unsafe_allow_html=True)
     
-    col1, col2 = st.columns(2)
+    # 简化为只有边界框检测
+    bbox = st.checkbox("边界框", value=True, key="target_bbox")
     
-    with col1:
-        bbox = st.checkbox("边界框", value=True)
-        mask = st.checkbox("分割掩码", value=True)
+    # 始终包含bbox目标
+    targets = ["bbox"]
     
-    with col2:
-        pose = st.checkbox("姿态关键点", value=True)
-        hand = st.checkbox("手部关键点", value=True)
-    
-    # Collect selected targets
-    targets = []
-    if bbox:
-        targets.append("bbox")
-    if mask:
-        targets.append("mask")
-    if pose:
-        targets.append("pose_keypoints")
-    if hand:
-        targets.append("hand_keypoints")
-    
-    if not targets:
-        st.error("请至少选择一个检测目标")
-        targets = ["bbox"]  # Default to bbox if nothing selected
-    
-    # Confidence threshold
+    # 置信度阈值
     confidence_threshold = st.slider("置信度阈值", 0.0, 1.0, 0.25, 0.05)
     
-    # Visualization options
+    # 简化可视化选项，只保留边界框显示
     st.markdown("<h3>可视化选项</h3>", unsafe_allow_html=True)
-    
-    col1, col2 = st.columns(2)
-    
-    with col1:
-        show_bbox = st.checkbox("显示边界框", value=True)
-        show_mask = st.checkbox("显示掩码", value=True)
-    
-    with col2:
-        show_pose = st.checkbox("显示姿态", value=True)
-        show_hand = st.checkbox("显示手部", value=True)
-    
-    show_caption = st.checkbox("显示描述", value=True)
+    show_bbox = st.checkbox("显示边界框", value=True, key="show_bbox")
+    show_caption = st.checkbox("显示描述", value=True, key="show_caption")
 
 # Create main content area with two columns
 col1, col2 = st.columns([1, 1])
@@ -374,7 +345,7 @@ with col1:
                             prompt_type=prompt_type_value,
                             prompt_text=prompt_text,
                             prompt_universal=prompt_universal,
-                            targets=targets,
+                            targets=["bbox"],  # 只使用边界框检测
                             bbox_threshold=confidence_threshold
                         )
                         
@@ -401,15 +372,15 @@ with col1:
                         # Get the image to analyze
                         image_to_analyze = st.session_state.processed_image if st.session_state.processed_image is not None else st.session_state.uploaded_image
                         
-                        # 确保包含所有目标类型
-                        all_targets = ["bbox", "mask", "pose_keypoints", "hand_keypoints"]
+                        # 只使用边界框检测
+                        bbox_targets = ["bbox"]
                         
                         # Perform detection with universal mode
                         result, session_id = detect_objects(
                             image_to_analyze,
                             prompt_type="universal",
                             prompt_universal=1,
-                            targets=all_targets,  # 使用所有目标类型
+                            targets=bbox_targets,  # 只使用边界框检测
                             bbox_threshold=0.05  # 使用更低的阈值
                         )
                         
@@ -495,23 +466,20 @@ with col2:
                 # 获取原始图像
                 original_image = st.session_state.processed_image if st.session_state.processed_image is not None else st.session_state.uploaded_image
                 
-                # 显示选项
+                # 简化显示选项，只保留边界框和描述
                 st.markdown("<h3>显示选项</h3>", unsafe_allow_html=True)
-                show_bbox = st.checkbox("显示边界框", value=True)
-                show_mask = st.checkbox("显示掩码", value=True)
-                show_pose = st.checkbox("显示姿态", value=True)
-                show_hand = st.checkbox("显示手部", value=True)
-                show_caption = st.checkbox("显示描述", value=True)
+                result_show_bbox = st.checkbox("显示边界框", value=True, key="result_show_bbox")
+                result_show_caption = st.checkbox("显示描述", value=True, key="result_show_caption")
                 
-                # 可视化检测结果
+                # 可视化检测结果，只使用边界框和描述
                 visualized_image = visualize_detection_results(
                     original_image, 
                     result["objects"],
-                    show_bbox=show_bbox,
-                    show_mask=show_mask,
-                    show_pose=show_pose,
-                    show_hand=show_hand,
-                    show_caption=show_caption
+                    show_bbox=result_show_bbox,
+                    show_mask=False,  # 不显示掩码
+                    show_pose=False,  # 不显示姿态
+                    show_hand=False,  # 不显示手部
+                    show_caption=result_show_caption
                 )
                 
                 # 显示可视化结果
@@ -549,10 +517,10 @@ with col2:
                 with st.expander("检测结果详情", expanded=False):
                     summary = create_detection_summary(result["objects"])
                     st.markdown(summary)
-                    
-                    # 显示原始JSON结果
-                    with st.expander("原始JSON结果", expanded=False):
-                        st.json(result)
+
+                # 显示原始JSON结果（作为单独的expander，不嵌套）
+                with st.expander("原始JSON结果", expanded=False):
+                    st.json(result)
             else:
                 st.warning("无法显示检测结果可视化，因为没有上传图像")
         else:
@@ -634,5 +602,18 @@ st.markdown("""
 <div style="margin-top: 50px; text-align: center; color: #888;">
     <p>DINO-X API 由 DeepDataSpace 提供</p>
     <p>本应用程序仅用于演示目的</p>
+</div>
+""", unsafe_allow_html=True)
+
+# 在页面最底部添加访问计数组件
+st.markdown("<hr>", unsafe_allow_html=True)
+st.markdown("""
+<div style="text-align: center; margin-top: 20px; margin-bottom: 20px;">
+    <span>
+        <img src="https://count.getloli.com/@tkzzzzzz6?name=tkzzzzzz6&theme=rule34&padding=8&offset=0&align=top&scale=1&pixelated=1&darkmode=auto" alt="访问计数" />
+    </span>
+</div>
+<div style="text-align: center; font-size: 12px; color: #888;">
+    © 2025 Ke Tan ->DINO-X 图像分析工具 | 由 Streamlit 提供支持
 </div>
 """, unsafe_allow_html=True) 
