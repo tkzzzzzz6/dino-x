@@ -3,7 +3,7 @@ import cv2
 import numpy as np
 import time
 import os
-from PIL import Image
+from PIL import Image, ImageEnhance
 import io
 import base64
 import json
@@ -236,71 +236,54 @@ with col1:
                     st.image(enhanced_image, caption="自动增强后的图像", use_column_width=True)
                 else:
                     # Manual adjustments
-                    # Create columns for adjustment controls
-                    adj_col1, adj_col2 = st.columns(2)
+                    st.subheader("手动调整")
                     
-                    with adj_col1:
-                        # Brightness adjustment
-                        brightness = st.slider("亮度", -100, 100, 0, 5)
-                        
-                        # Contrast adjustment
-                        contrast = st.slider("对比度", -100, 100, 0, 5)
+                    # Brightness adjustment
+                    brightness = st.slider("亮度", -100, 100, 0, 5)
                     
-                    with adj_col2:
-                        # Saturation adjustment
-                        saturation = st.slider("饱和度", -100, 100, 0, 5)
-                        
-                        # Sharpness adjustment
-                        sharpness = st.slider("锐度", 0, 100, 0, 5)
+                    # Contrast adjustment
+                    contrast = st.slider("对比度", -100, 100, 0, 5)
                     
-                    # Apply adjustments to the image
-                    adjusted_image = image_np.copy()
+                    # Saturation adjustment
+                    saturation = st.slider("饱和度", -100, 100, 0, 5)
                     
-                    # Apply brightness adjustment
-                    if brightness != 0:
-                        hsv = cv2.cvtColor(adjusted_image, cv2.COLOR_RGB2HSV)
-                        h, s, v = cv2.split(hsv)
-                        
-                        if brightness > 0:
-                            v = np.clip(v + brightness * 2.55, 0, 255).astype(np.uint8)
-                        else:
-                            v = np.clip(v - abs(brightness) * 2.55, 0, 255).astype(np.uint8)
-                        
-                        hsv = cv2.merge((h, s, v))
-                        adjusted_image = cv2.cvtColor(hsv, cv2.COLOR_HSV2RGB)
+                    # Sharpness adjustment
+                    sharpness = st.slider("锐度", -100, 100, 0, 5)
                     
-                    # Apply contrast adjustment
-                    if contrast != 0:
-                        f = 131 * (contrast + 127) / (127 * (131 - contrast))
-                        alpha_c = f
-                        gamma_c = 127 * (1 - f)
-                        
-                        adjusted_image = cv2.addWeighted(adjusted_image, alpha_c, adjusted_image, 0, gamma_c)
-                    
-                    # Apply saturation adjustment
-                    if saturation != 0:
-                        hsv = cv2.cvtColor(adjusted_image, cv2.COLOR_RGB2HSV)
-                        h, s, v = cv2.split(hsv)
-                        
-                        if saturation > 0:
-                            s = np.clip(s + saturation * 2.55, 0, 255).astype(np.uint8)
-                        else:
-                            s = np.clip(s - abs(saturation) * 2.55, 0, 255).astype(np.uint8)
-                        
-                        hsv = cv2.merge((h, s, v))
-                        adjusted_image = cv2.cvtColor(hsv, cv2.COLOR_HSV2RGB)
-                    
-                    # Apply sharpness adjustment
-                    if sharpness > 0:
-                        kernel = np.array([[-1, -1, -1], [-1, 9, -1], [-1, -1, -1]])
-                        adjusted_image = cv2.filter2D(adjusted_image, -1, kernel * (sharpness / 100))
-                    
-                    # Store the adjusted image
-                    st.session_state.processed_image = adjusted_image
-                    
-                    # Display the adjusted image if any adjustments were made
-                    if brightness != 0 or contrast != 0 or saturation != 0 or sharpness > 0:
-                        st.image(adjusted_image, caption="调整后的图像", use_column_width=True)
+                    # Apply adjustments button
+                    if st.button("应用调整", key="apply_adjustments"):
+                        with st.spinner("正在应用调整..."):
+                            # Get the image to adjust
+                            image_to_adjust = st.session_state.uploaded_image.copy()
+                            
+                            # Convert to PIL Image for adjustments
+                            pil_image = Image.fromarray(image_to_adjust)
+                            
+                            # Apply adjustments
+                            if brightness != 0:
+                                enhancer = ImageEnhance.Brightness(pil_image)
+                                pil_image = enhancer.enhance(1 + brightness/100)
+                            
+                            if contrast != 0:
+                                enhancer = ImageEnhance.Contrast(pil_image)
+                                pil_image = enhancer.enhance(1 + contrast/100)
+                            
+                            if saturation != 0:
+                                enhancer = ImageEnhance.Color(pil_image)
+                                pil_image = enhancer.enhance(1 + saturation/100)
+                            
+                            if sharpness != 0:
+                                enhancer = ImageEnhance.Sharpness(pil_image)
+                                pil_image = enhancer.enhance(1 + sharpness/100)
+                            
+                            # Convert back to numpy array
+                            adjusted_image = np.array(pil_image)
+                            
+                            # Store the adjusted image
+                            st.session_state.processed_image = adjusted_image
+                            
+                            # Display the adjusted image
+                            st.image(adjusted_image, caption="调整后的图像", use_column_width=True)
 
                 # Add image resize option
                 resize_image = st.checkbox("调整图像尺寸", value=False, help="调整图像尺寸可能会影响检测效果")

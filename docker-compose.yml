@@ -8,8 +8,10 @@ services:
       - "8501:8501"
     volumes:
       - ./.env:/app/.env
+    env_file:
+      - .env
     environment:
-      - DINOX_API_TOKEN=${DINOX_API_TOKEN}
+      - PYTHONUNBUFFERED=1
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "curl", "--fail", "http://localhost:8501/_stcore/health"]

@@ -15,10 +15,21 @@ load_dotenv()
 # 请将下面的 "你的API令牌" 替换为你从 DINO-X 获取的实际 API 令牌
 API_TOKEN = os.getenv("DINOX_API_TOKEN") or "你的API令牌"
 
+# 打印API令牌状态（不显示完整令牌）
+if API_TOKEN and API_TOKEN != "你的API令牌":
+    print(f"API令牌已设置: {API_TOKEN[:5]}...{API_TOKEN[-5:]} (长度: {len(API_TOKEN)})")
+else:
+    print("警告: API令牌未设置或使用了默认值")
+
 # API endpoints
 DETECTION_API_URL = "https://api.deepdataspace.com/v2/task/dinox/detection"
 REGION_VL_API_URL = "https://api.deepdataspace.com/v2/task/dinox/region_vl"
 TASK_STATUS_API_URL = "https://api.deepdataspace.com/v2/task_status/{task_uuid}"
+
+# 打印API端点
+print(f"检测API端点: {DETECTION_API_URL}")
+print(f"区域视觉语言API端点: {REGION_VL_API_URL}")
+print(f"任务状态API端点: {TASK_STATUS_API_URL}")
 
 def encode_image_to_base64(image):
     """
@@ -40,8 +51,8 @@ def detect_objects_async(image, prompt_type="text", prompt_text=None, prompt_uni
     Create a detection task using the DINO-X API and return the task UUID
     按照最新API文档创建检测任务
     """
-    if not API_TOKEN:
-        raise ValueError("API token not found. Please set the DINOX_API_TOKEN environment variable.")
+    if not API_TOKEN or API_TOKEN == "你的API令牌":
+        raise ValueError("API token not found or using default value. Please set the DINOX_API_TOKEN environment variable.")
     
     # 准备图像数据
     image_data = image if isinstance(image, str) else encode_image_to_base64(image)
@@ -74,56 +85,73 @@ def detect_objects_async(image, prompt_type="text", prompt_text=None, prompt_uni
     
     print(f"Sending request to {DETECTION_API_URL}")
     print(f"Headers: {headers}")
-    print(f"Payload: {json.dumps({k: v if k != 'image' else '...' for k, v in payload.items()})}")
+    print(f"Payload keys: {list(payload.keys())}")
     
-    # 发送API请求 - 尝试两种方式
+    # 尝试多种API调用方式
     try:
-        # 方式1: 使用json参数（requests会自动处理JSON序列化）
+        print("尝试方式1: 使用requests.post的json参数")
         response = requests.post(DETECTION_API_URL, json=payload, headers=headers)
         
         print(f"Response status code: {response.status_code}")
-        print(f"Response text: {response.text}")
+        print(f"Response text: {response.text[:500]}...")  # 只打印前500个字符
         
         if response.status_code != 200:
-            print("尝试替代方法...")
-            # 方式2: 手动序列化JSON并使用data参数
+            print("尝试方式2: 使用requests.post的data参数和手动JSON序列化")
             json_payload = json.dumps(payload)
             response = requests.post(DETECTION_API_URL, data=json_payload, headers=headers)
             
-            print(f"Alternative method response status code: {response.status_code}")
-            print(f"Alternative method response text: {response.text}")
+            print(f"Response status code: {response.status_code}")
+            print(f"Response text: {response.text[:500]}...")  # 只打印前500个字符
+            
+            if response.status_code != 200:
+                print("尝试方式3: 按照官方文档示例使用json.dumps")
+                headers["Content-Type"] = "application/json"
+                response = requests.post(
+                    url=DETECTION_API_URL,
+                    data=json.dumps(payload),
+                    headers=headers
+                )
+                
+                print(f"Response status code: {response.status_code}")
+                print(f"Response text: {response.text[:500]}...")  # 只打印前500个字符
     except Exception as e:
         print(f"API request error: {str(e)}")
+        import traceback
+        print(traceback.format_exc())
         raise
     
     if response.status_code != 200:
         raise Exception(f"API request failed with status code {response.status_code}: {response.text}")
     
-    response_data = response.json()
-    print(f"Response data: {json.dumps(response_data)}")
-    
-    if response_data.get("code") != 0:
-        raise Exception(f"API request failed: {response_data.get('msg')}")
-    
-    # 检查响应中是否包含task_uuid
-    if 'data' not in response_data:
-        raise Exception(f"API response missing 'data' field: {response_data}")
-    
-    # 检查是否包含task_uuid或uuid（兼容不同的API版本）
-    if 'task_uuid' in response_data['data']:
-        return response_data["data"]["task_uuid"]
-    elif 'uuid' in response_data['data']:
-        return response_data["data"]["uuid"]
-    else:
-        raise Exception(f"API response missing task identifier in 'data': {response_data['data']}")
+    try:
+        response_data = response.json()
+        print(f"Response data: {json.dumps(response_data)}")
+        
+        if response_data.get("code") != 0:
+            raise Exception(f"API request failed: {response_data.get('msg')}")
+        
+        # 检查响应中是否包含task_uuid
+        if 'data' not in response_data:
+            raise Exception(f"API response missing 'data' field: {response_data}")
+        
+        # 检查是否包含task_uuid或uuid（兼容不同的API版本）
+        if 'task_uuid' in response_data['data']:
+            return response_data["data"]["task_uuid"]
+        elif 'uuid' in response_data['data']:
+            return response_data["data"]["uuid"]
+        else:
+            raise Exception(f"API response missing task identifier in 'data': {response_data['data']}")
+    except json.JSONDecodeError:
+        print(f"无法解析JSON响应: {response.text}")
+        raise Exception("API返回了无效的JSON响应")
 
 def get_task_result(task_uuid, max_retries=30, retry_interval=1):
     """
     Get the result of a task using the DINO-X API
     按照最新API文档获取任务结果
     """
-    if not API_TOKEN:
-        raise ValueError("API token not found. Please set the DINOX_API_TOKEN environment variable.")
+    if not API_TOKEN or API_TOKEN == "你的API令牌":
+        raise ValueError("API token not found or using default value. Please set the DINOX_API_TOKEN environment variable.")
     
     headers = {
         "Token": API_TOKEN,
@@ -135,60 +163,70 @@ def get_task_result(task_uuid, max_retries=30, retry_interval=1):
     for retry in range(max_retries):
         url = TASK_STATUS_API_URL.format(task_uuid=task_uuid)
         print(f"Request URL: {url}")
+        print(f"Retry {retry+1}/{max_retries}")
         
         try:
+            print(f"Sending GET request to {url}")
             response = requests.get(url, headers=headers)
             
             print(f"Response status code: {response.status_code}")
-            print(f"Response text: {response.text}")
+            if response.text:
+                print(f"Response text: {response.text[:500]}...")  # 只打印前500个字符
+            else:
+                print("Response text is empty")
             
             if response.status_code != 200:
-                print(f"API request failed with status code {response.status_code}: {response.text}")
+                print(f"API request failed with status code {response.status_code}")
                 # Continue to retry instead of raising exception immediately
                 time.sleep(retry_interval)
                 continue
             
-            response_data = response.json()
-            print(f"Response data: {json.dumps(response_data)}")
-            
-            if response_data.get("code") != 0:
-                print(f"API request failed: {response_data.get('msg')}")
-                # Continue to retry instead of raising exception immediately
-                time.sleep(retry_interval)
-                continue
-            
-            # 检查响应中是否包含data字段
-            if 'data' not in response_data:
-                print(f"API response missing 'data' field: {response_data}")
-                time.sleep(retry_interval)
-                continue
-            
-            data = response_data["data"]
-            status = data.get("status")
-            
-            print(f"Task status: {status}")
-            
-            if status == "success":
-                # 检查响应中是否包含result字段
-                if 'result' not in data:
-                    print(f"API response missing 'result' field in 'data': {data}")
-                    # 尝试兼容不同的API版本
-                    if 'objects' in data:
-                        print("Found 'objects' directly in data, using it as result")
-                        return {"objects": data.get("objects")}, data.get("session_id")
-                    return {}, data.get("session_id")
+            try:
+                response_data = response.json()
+                print(f"Response data: {json.dumps(response_data)}")
                 
-                return data.get("result"), data.get("session_id")
-            elif status == "failed":
-                error_msg = data.get("error", "Unknown error")
-                print(f"Task failed: {error_msg}")
-                raise Exception(f"Task failed: {error_msg}")
-            elif status in ["waiting", "running"]:
-                print(f"Task is {status}, waiting...")
-            else:
-                print(f"Unknown task status: {status}")
+                if response_data.get("code") != 0:
+                    print(f"API request failed: {response_data.get('msg')}")
+                    # Continue to retry instead of raising exception immediately
+                    time.sleep(retry_interval)
+                    continue
+                
+                # 检查响应中是否包含data字段
+                if 'data' not in response_data:
+                    print(f"API response missing 'data' field: {response_data}")
+                    time.sleep(retry_interval)
+                    continue
+                
+                data = response_data["data"]
+                status = data.get("status")
+                
+                print(f"Task status: {status}")
+                
+                if status == "success":
+                    # 检查响应中是否包含result字段
+                    if 'result' not in data:
+                        print(f"API response missing 'result' field in 'data': {data}")
+                        # 尝试兼容不同的API版本
+                        if 'objects' in data:
+                            print("Found 'objects' directly in data, using it as result")
+                            return {"objects": data.get("objects")}, data.get("session_id")
+                        return {}, data.get("session_id")
+                    
+                    return data.get("result"), data.get("session_id")
+                elif status == "failed":
+                    error_msg = data.get("error", "Unknown error")
+                    print(f"Task failed: {error_msg}")
+                    raise Exception(f"Task failed: {error_msg}")
+                elif status in ["waiting", "running"]:
+                    print(f"Task is {status}, waiting...")
+                else:
+                    print(f"Unknown task status: {status}")
+            except json.JSONDecodeError:
+                print(f"无法解析JSON响应: {response.text}")
+                time.sleep(retry_interval)
+                continue
             
-            print(f"Retry {retry+1}/{max_retries}, waiting {retry_interval} seconds...")
+            print(f"Waiting {retry_interval} seconds before next retry...")
             time.sleep(retry_interval)
         except Exception as e:
             print(f"Error checking task status: {str(e)}")

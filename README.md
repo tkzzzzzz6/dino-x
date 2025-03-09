@@ -1,50 +1,100 @@
-# DINO-X Video Detection Demo
+# DINO-X 图像分析工具
 
-This application demonstrates real-time object detection, segmentation, pose estimation, and more using the DINO-X API on video streams.
+基于 DINO-X API 的图像分析工具，支持目标检测和图像处理功能。
 
-## Features
+## 功能特点
 
-- Real-time object detection from webcam or video files
-- Support for text prompts or universal detection
-- Multiple detection targets: bounding boxes, masks, pose keypoints, hand keypoints
-- Visual display of detection results
-- Region-based visual language descriptions
-- Adjustable confidence thresholds
-- Detection history tracking
+- 图像上传和 URL 输入
+- 图像预处理和增强
+- 目标检测和可视化
+- 检测结果分析和展示
 
-## Setup
+## 环境要求
 
-1. Clone this repository
-2. Install the required dependencies:
-   ```
-   pip install -r requirements.txt
-   ```
-3. Create a `.env` file in the root directory with your DINO-X API token:
-   ```
-   DINOX_API_TOKEN=your_api_token_here
-   ```
+- Python 3.9+
+- Docker (可选，用于容器化部署)
 
-## Usage
+## 本地运行
 
-Run the Streamlit application:
+### 1. 安装依赖
 
-```
-streamlit run app.py
+```bash
+pip install -r requirements.txt
 ```
 
-Then open your browser and navigate to the URL displayed in the terminal (usually http://localhost:8501).
+### 2. 设置 API 令牌
 
-## Configuration
+创建 `.env` 文件并添加您的 DINO-X API 令牌：
 
-- Select input source (webcam or video file)
-- Choose detection mode (text prompt or universal)
-- Enter text prompts for specific objects
-- Select detection targets (bounding boxes, masks, pose keypoints, hand keypoints)
-- Adjust confidence threshold
-- Toggle visualization options
+```
+DINOX_API_TOKEN=your_api_token_here
+```
 
-## Notes
+或者设置环境变量：
 
-- The application processes frames at regular intervals to avoid API rate limiting
-- Detection results are cached to improve performance
-- For best results, ensure good lighting conditions when using webcam input 
+```bash
+# Windows
+set DINOX_API_TOKEN=your_api_token_here
+
+# Linux/Mac
+export DINOX_API_TOKEN=your_api_token_here
+```
+
+### 3. 运行应用
+
+```bash
+python run.py
+```
+
+应用将在 http://localhost:8501 上运行。
+
+## Docker 部署
+
+### 使用 Docker Compose
+
+1. 创建 `.env` 文件并添加您的 API 令牌
+2. 运行以下命令：
+
+```bash
+docker-compose up -d
+```
+
+### 手动构建和运行
+
+1. 构建 Docker 镜像：
+
+```bash
+docker build -t dinox-app .
+```
+
+2. 运行容器：
+
+```bash
+docker run -p 8501:8501 -e DINOX_API_TOKEN=your_api_token dinox-app
+```
+
+## 使用说明
+
+1. 上传图像或输入图像 URL
+2. 可选：调整图像（亮度、对比度等）
+3. 设置检测参数（提示词、置信度阈值等）
+4. 点击"分析图像"按钮进行检测
+5. 查看检测结果和可视化效果
+
+## 故障排除
+
+### API 调用失败
+
+- 确保已设置有效的 DINOX_API_TOKEN
+- 检查网络连接
+- 查看日志以获取详细错误信息
+
+### 容器无法启动
+
+- 确保 Docker 已正确安装
+- 检查端口 8501 是否被占用
+- 查看容器日志：`docker logs dinox-app`
+
+## 许可证
+
+MIT 
