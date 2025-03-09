@@ -184,10 +184,10 @@ col1, col2 = st.columns([1, 1])
 with col1:
     st.markdown("<h2 class='sub-header'>上传图像</h2>", unsafe_allow_html=True)
     
-    # Add tabs for different input methods
-    image_input_tab, url_input_tab = st.tabs(["上传图像文件", "输入图像 URL"])
-
-    with image_input_tab:
+    # 使用单选按钮替代tabs
+    input_method = st.radio("选择输入方式", ["上传图像文件", "输入图像 URL"])
+    
+    if input_method == "上传图像文件":
         # Image upload
         uploaded_file = st.file_uploader("选择图像文件", type=["jpg", "jpeg", "png"])
         
@@ -202,7 +202,7 @@ with col1:
                 # Store the image in session state
                 st.session_state.uploaded_image = image_np
                 
-                # Display the uploaded image
+                # Display the image
                 st.image(image_np, caption="上传的图像", use_column_width=True)
                 
                 # Image adjustments
@@ -402,11 +402,8 @@ with col1:
                 st.error(f"处理图像时出错: {str(e)}")
                 import traceback
                 st.error(traceback.format_exc())
-        
-        else:
-            st.info("请上传图像文件进行分析。")
-
-    with url_input_tab:
+    
+    elif input_method == "输入图像 URL":
         # Image URL input
         image_url = st.text_input("输入图像 URL", "")
         

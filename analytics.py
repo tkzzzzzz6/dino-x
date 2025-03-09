@@ -78,16 +78,16 @@ class DetectionAnalytics:
         """
         st.markdown("<h2 class='sub-header'>Analytics Dashboard</h2>", unsafe_allow_html=True)
         
-        # Create tabs for different analytics views
-        tab1, tab2, tab3 = st.tabs(["Object Counts", "Confidence Trends", "Performance"])
+        # 使用单选按钮替代tabs
+        analytics_view = st.radio("选择分析视图", ["Object Counts", "Confidence Trends", "Performance"])
         
-        with tab1:
+        if analytics_view == "Object Counts":
             self._render_object_counts()
         
-        with tab2:
+        elif analytics_view == "Confidence Trends":
             self._render_confidence_trends()
         
-        with tab3:
+        elif analytics_view == "Performance":
             self._render_performance_metrics()
     
     def _render_object_counts(self):

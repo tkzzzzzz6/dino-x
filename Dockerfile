@@ -6,16 +6,20 @@ WORKDIR /app
 RUN apt-get update && apt-get install -y \
     libgl1-mesa-glx \
     libglib2.0-0 \
+    curl \
     && rm -rf /var/lib/apt/lists/*
 
 # 复制依赖文件
 COPY requirements.txt .
 
-# 安装Python依赖
+# 安装Python依赖 - 确保使用确切的版本
 RUN pip install --no-cache-dir -r requirements.txt
 
 # 安装pycocotools（用于掩码解码）
 RUN pip install --no-cache-dir pycocotools
+
+# 验证Streamlit版本
+RUN python -c "import streamlit; print(f'Installed Streamlit version: {streamlit.__version__}')"
 
 # 复制应用程序代码
 COPY . .
